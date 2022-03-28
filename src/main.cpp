@@ -25,12 +25,12 @@ void iopins_init(void) {
     gpio_config(&io_conf);
 }
 
-gpio_num_t sda_pin = GPIO_NUM_21;
-gpio_num_t scl_pin = GPIO_NUM_22; 
+gpio_num_t sda_pin = GPIO_NUM_32;
+gpio_num_t scl_pin = GPIO_NUM_33; 
 uint32_t speed_hz = 100000;
 uint8_t address = 0x15;
 i2c_port_t bus_num = I2C_NUM_0; 
-uint8_t DataToSend[] = {5, 15, 30, 60};
+uint8_t DataToSend[] = {1, 2, 3, 4};
 size_t len = sizeof(DataToSend);
 
 
@@ -49,12 +49,12 @@ i2c_config_t conf = {
 
 esp_err_t sendData(const uint8_t *data, size_t len )
 {
-        i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-        RETURN_IF_ERR(i2c_master_start(cmd));
-        RETURN_IF_ERR(i2c_master_write_byte(cmd, address << 1, true));
-        RETURN_IF_ERR(i2c_master_write(cmd, data, len, I2C_MASTER_LAST_NACK));
-        RETURN_IF_ERR(i2c_master_stop(cmd));
-        RETURN_IF_ERR(i2c_master_cmd_begin(bus_num, cmd, pdMS_TO_TICKS(25)));
+    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+    RETURN_IF_ERR(i2c_master_start(cmd));
+    RETURN_IF_ERR(i2c_master_write_byte(cmd, address << 1, true));
+    RETURN_IF_ERR(i2c_master_write(cmd, data, len, I2C_MASTER_LAST_NACK));
+    RETURN_IF_ERR(i2c_master_stop(cmd));
+    RETURN_IF_ERR(i2c_master_cmd_begin(bus_num, cmd, pdMS_TO_TICKS(125)));
     return ESP_OK;
 }
 
@@ -68,16 +68,16 @@ extern "C" void app_main() {  // example for connect ESP32 with I2C
     gpio_set_level(GPIO_NUM_17, 1);
     ESP_ERROR_CHECK(i2c_param_config(bus_num, &conf));
     ESP_ERROR_CHECK(i2c_driver_install(bus_num, I2C_MODE_MASTER, 0, 0, 0));
-    // ESP_ERROR_CHECK(sendData( DataToSend, len ));
     
-    while (true) {
-        if (send_data) {  // is board still working? 
-            send_data.ack();
-            if (L_G) L_G = false; else  L_G = true;
-            gpio_set_level(GPIO_NUM_17, L_G);
-        }
+    
+    while (i < 250) {
 
-        ESP_LOGI("TAG1", "%i \n", i++);  
-        vTaskDelay(pdMS_TO_TICKS(500));   
+        ESP_ERROR_CHECK(sendData( DataToSend, len ));  // todo zprovoznit 
+        if (L_G) L_G = false; else  L_G = true;
+        gpio_set_level(GPIO_NUM_17, L_G);
+        for (int k = 0; k < 4; k++ ) DataToSend[k] += 1; 
+        for (int k = 0; k < 4; k++ ) ESP_LOGI("DATA: ", "%i, ", DataToSend[k]);
+        ESP_LOGI("TAG1: ", "%i \n", i++);  
+        vTaskDelay(pdMS_TO_TICKS(2000));   
     }
 }
